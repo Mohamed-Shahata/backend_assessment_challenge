@@ -10,6 +10,7 @@ import { RedisModule } from './redis/redis.module';
 import { HealthModule } from './health/health.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { AuthModule } from './auth/auth.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuthModule } from './auth/auth.module';
     RedisModule,
     HealthModule,
     AuthModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [AppService],

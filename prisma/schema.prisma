@@ -17,11 +17,44 @@ enum Role {
   ADMIN
 }
 
+enum LedgerType {
+  DEPOSIT
+  TRANSFER_IN
+  TRANSFER_OUT
+  PURCHASE
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
   password  String
   role      Role     @default(CUSTOMER)
   createdAt DateTime @default(now())
-  // relation to Wallet will be added in task 03
+  wallet    Wallet?
+}
+
+
+model Wallet {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  balance   Decimal  @db.Decimal(18, 2) @default(0)
+  version   Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  entries   LedgerEntry[]
+}
+
+model LedgerEntry {
+  id           String     @id @default(uuid())
+  walletId     String
+  wallet       Wallet     @relation(fields: [walletId], references: [id])
+  type         LedgerType
+  amount       Decimal    @db.Decimal(18, 2)
+  balanceAfter Decimal    @db.Decimal(18, 2)
+  referenceId  String
+  createdAt    DateTime   @default(now())
+
+  @@unique([walletId, referenceId, type])
+  @@index([walletId])
 }

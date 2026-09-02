@@ -11,6 +11,7 @@ describe('AuthService', () => {
       findUnique: jest.Mock;
       create: jest.Mock;
     };
+    $transaction: jest.Mock;
   };
   let jwtService: {
     signAsync: jest.Mock;
@@ -23,6 +24,7 @@ describe('AuthService', () => {
     keys: jest.Mock;
   };
   let config: { get: jest.Mock };
+  let walletService: { provisionWallet: jest.Mock };
 
   const CONFIG_VALUES: Record<string, string> = {
     'jwt.accessSecret': 'access-secret',
@@ -37,7 +39,12 @@ describe('AuthService', () => {
         findUnique: jest.fn(),
         create: jest.fn(),
       },
+      $transaction: jest.fn(),
     };
+    prisma.$transaction.mockImplementation(
+      async (cb: (tx: unknown) => unknown) => cb(prisma),
+    );
+    walletService = { provisionWallet: jest.fn() };
     jwtService = {
       signAsync: jest.fn(),
       verifyAsync: jest.fn(),
@@ -56,6 +63,7 @@ describe('AuthService', () => {
       prisma as never,
       jwtService as unknown as JwtService,
       config as unknown as ConfigService,
+      walletService as never,
       redis as never,
     );
 

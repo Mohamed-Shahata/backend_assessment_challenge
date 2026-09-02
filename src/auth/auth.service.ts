@@ -12,6 +12,7 @@ import { randomUUID } from 'crypto';
 import type { Redis } from 'ioredis';
 import { PrismaService } from '../prisma/prisma.service';
 import { REDIS_CLIENT } from '../redis/redis.constants';
+import { WalletService } from '../modules/wallet/wallet.service';
 import { AuthTokensDto } from './dto/auth-tokens.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -32,6 +33,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly config: ConfigService,
+    private readonly walletService: WalletService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
@@ -44,8 +46,15 @@ export class AuthService {
     }
 
     const hashed = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
-    const user = await this.prisma.user.create({
-      data: { email: dto.email, password: hashed },
+
+    // User + wallet are created atomically: a registered user must never
+    // end up without a wallet (see task 03 README, "Wallet auto-provisioning").
+    const user = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.user.create({
+        data: { email: dto.email, password: hashed },
+      });
+      await this.walletService.provisionWallet(created.id, tx);
+      return created;
     });
 
     return this.issueTokenPair(user.id, user.role);
