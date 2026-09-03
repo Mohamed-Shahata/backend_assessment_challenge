@@ -24,6 +24,11 @@ enum LedgerType {
   PURCHASE
 }
 
+enum OrderStatus {
+  CONFIRMED
+  FAILED
+}
+
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
@@ -57,4 +62,39 @@ model LedgerEntry {
 
   @@unique([walletId, referenceId, type])
   @@index([walletId])
+}
+
+model Product {
+  id    String  @id @default(uuid())
+  name  String
+  price Decimal @db.Decimal(18, 2)
+
+  events FlashSaleEvent[]
+}
+
+model FlashSaleEvent {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  totalStock Int
+  remaining  Int
+  startsAt   DateTime
+  endsAt     DateTime
+  createdAt  DateTime @default(now())
+  orders     Order[]
+
+  @@index([productId])
+}
+
+model Order {
+  id               String         @id @default(uuid())
+  userId           String
+  flashSaleEventId String
+  event            FlashSaleEvent @relation(fields: [flashSaleEventId], references: [id])
+  status           OrderStatus
+  idempotencyKey   String
+  createdAt        DateTime       @default(now())
+
+  @@unique([flashSaleEventId, idempotencyKey])
+  @@index([userId])
 }
