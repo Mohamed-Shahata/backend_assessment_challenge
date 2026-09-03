@@ -112,8 +112,9 @@ describe('FlashSaleService', () => {
         'flash-sale:event-1:k1',
       );
       expect(queue.add).toHaveBeenCalledWith(
-        'order-confirmed',
-        expect.objectContaining({ userId: 'user-1', eventId: 'event-1' }),
+        'order-confirmation',
+        { orderId: result.orderId, userId: 'user-1' },
+        expect.objectContaining({ attempts: 5 }),
       );
     });
   });

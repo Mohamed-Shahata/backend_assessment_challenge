@@ -17,4 +17,11 @@ export default () => ({
     ttl: parseInt(process.env.THROTTLE_TTL ?? '60', 10),
     limit: parseInt(process.env.THROTTLE_LIMIT ?? '10', 10),
   },
+  notifications: {
+    // 0..1 chance that the mock order-notification worker simulates a
+    // failure, so retry/backoff can be exercised in dev. Defaults to off.
+    simulateFailureRate: parseFloat(
+      process.env.SIMULATE_NOTIFICATION_FAILURE_RATE ?? '0',
+    ),
+  },
 });
