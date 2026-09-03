@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { BullModule } from '@nestjs/bullmq';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import appConfig from './config/app-config';
@@ -12,6 +13,7 @@ import { CorrelationIdMiddleware } from './common/middleware/correlation-id.midd
 import { AuthModule } from './auth/auth.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { FlashSaleModule } from './modules/flash-sale/flash-sale.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -31,12 +33,22 @@ import { FlashSaleModule } from './modules/flash-sale/flash-sale.module';
         ],
       }),
     }),
+    BullModule.forRootAsync({
+      useFactory: (config: ConfigService) => ({
+        connection: {
+          host: config.get<string>('redis.host'),
+          port: config.get<number>('redis.port'),
+        },
+      }),
+      inject: [ConfigService],
+    }),
     PrismaModule,
     RedisModule,
     HealthModule,
     AuthModule,
     WalletModule,
     FlashSaleModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

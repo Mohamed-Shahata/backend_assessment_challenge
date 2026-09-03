@@ -2,6 +2,8 @@ import { plainToInstance } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
+  IsNumber,
+  IsOptional,
   IsString,
   Max,
   Min,
@@ -50,6 +52,12 @@ class EnvironmentVariables {
   @Min(1)
   @Max(65535)
   PORT!: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  SIMULATE_NOTIFICATION_FAILURE_RATE?: number;
 }
 
 export function validate(config: Record<string, unknown>) {

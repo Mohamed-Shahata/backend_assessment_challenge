@@ -1,19 +1,24 @@
 import {
   BadRequestException,
   ConflictException,
-  Inject,
   Injectable,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 import { OrderStatus, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WalletService } from '../wallet/wallet.service';
 import { CreateFlashSaleEventDto } from './dto/create-flash-sale-event.dto';
 import { PurchaseFlashSaleDto } from './dto/purchase-flash-sale.dto';
-import { FLASH_SALE_QUEUE } from './queue/flash-sale-queue.constants';
+import {
+  ORDER_CONFIRMATION_JOB,
+  ORDER_CONFIRMATION_JOB_OPTIONS,
+  ORDER_NOTIFICATIONS_QUEUE,
+  type OrderConfirmationJobData,
+} from '../notifications/notifications.constants';
 
 /** Row shape returned by the atomic `UPDATE ... RETURNING remaining` reservation query. */
 interface ReservationRow {
@@ -32,7 +37,8 @@ export class FlashSaleService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly walletService: WalletService,
-    @Inject(FLASH_SALE_QUEUE) private readonly queue: Queue,
+    @InjectQueue(ORDER_NOTIFICATIONS_QUEUE)
+    private readonly notificationsQueue: Queue<OrderConfirmationJobData>,
   ) {}
 
   async createEvent(dto: CreateFlashSaleEventDto) {
@@ -145,16 +151,17 @@ export class FlashSaleService {
     });
 
     if (!order.raced && order.order.status === OrderStatus.CONFIRMED) {
-      await this.queue
-        .add('order-confirmed', {
-          orderId: order.order.id,
-          userId,
-          eventId: dto.eventId,
-          productId: event.productId,
-        })
+      // Fire-and-forget: a queueing failure must not affect the Order/Wallet
+      // that were already committed above.
+      await this.notificationsQueue
+        .add(
+          ORDER_CONFIRMATION_JOB,
+          { orderId: order.order.id, userId },
+          ORDER_CONFIRMATION_JOB_OPTIONS,
+        )
         .catch((err: Error) =>
           this.logger.error(
-            `Failed to enqueue order-confirmed job: ${err.message}`,
+            `Failed to enqueue order-confirmation job: ${err.message}`,
           ),
         );
     }
