@@ -36,7 +36,19 @@ export class AuthController {
   // but still capped to stop scripted mass-account creation.
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Create a new CUSTOMER account' })
-  @ApiResponse({ status: 201, type: AuthTokensDto })
+  @ApiResponse({
+    status: 201,
+    description: 'Account created, wallet provisioned, tokens issued',
+    type: AuthTokensDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error (bad email/password)',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'A user with this email already exists',
+  })
   register(@Body() dto: RegisterDto): Promise<AuthTokensDto> {
     return this.authService.register(dto);
   }
@@ -48,6 +60,11 @@ export class AuthController {
   @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Log in with email + password' })
   @ApiResponse({ status: 200, type: AuthTokensDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error (bad email/password)',
+  })
+  @ApiResponse({ status: 401, description: 'Invalid credentials' })
   login(@Body() dto: LoginDto): Promise<AuthTokensDto> {
     return this.authService.login(dto);
   }
@@ -59,6 +76,15 @@ export class AuthController {
     summary: 'Rotate a refresh token for a new access/refresh pair',
   })
   @ApiResponse({ status: 200, type: AuthTokensDto })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error (missing refreshToken)',
+  })
+  @ApiResponse({
+    status: 401,
+    description:
+      'Invalid, expired, or already-rotated refresh token (reuse of a rotated/forged token revokes all sessions for that user)',
+  })
   refresh(@Body() dto: RefreshTokenDto): Promise<AuthTokensDto> {
     return this.authService.refresh(dto.refreshToken);
   }
@@ -66,7 +92,14 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Revoke a refresh token / end a session' })
-  @ApiResponse({ status: 204 })
+  @ApiResponse({
+    status: 204,
+    description: 'Session revoked (or token was already invalid)',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Validation error (missing refreshToken)',
+  })
   async logout(@Body() dto: RefreshTokenDto): Promise<void> {
     await this.authService.logout(dto.refreshToken);
   }
@@ -75,6 +108,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Return the currently authenticated user' })
+  @ApiResponse({
+    status: 200,
+    description: 'Current user payload from the access token',
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token' })
   me(@CurrentUser() user: CurrentUserPayload): CurrentUserPayload {
     return user;
   }
@@ -89,6 +127,12 @@ export class AuthController {
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: '[RBAC demo] ADMIN-only endpoint' })
+  @ApiResponse({
+    status: 200,
+    description: 'Caller is authenticated and has the ADMIN role',
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token' })
+  @ApiResponse({ status: 403, description: 'Authenticated but not an ADMIN' })
   adminCheck(): { ok: true } {
     return { ok: true };
   }

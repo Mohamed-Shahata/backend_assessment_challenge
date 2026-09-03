@@ -37,7 +37,12 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
-RUN chmod +x ./docker-entrypoint.sh
+# Defensive: strip any CRLF line endings that a Windows git checkout may have
+# introduced (a CRLF shebang breaks `exec` on Alpine/Linux at container
+# startup with "no such file or directory", even though the file exists).
+# .gitattributes now pins this file to LF for future checkouts, but this
+# keeps existing/older clones working too.
+RUN sed -i 's/\r$//' ./docker-entrypoint.sh && chmod +x ./docker-entrypoint.sh
 
 EXPOSE 3000
 
