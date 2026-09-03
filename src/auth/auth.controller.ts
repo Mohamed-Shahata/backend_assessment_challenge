@@ -117,11 +117,6 @@ export class AuthController {
     return user;
   }
 
-  /**
-   * Temporary RBAC smoke-test endpoint for this task's Definition of Done
-   * (verifying that @Roles(Role.ADMIN) rejects CUSTOMER users with 403).
-   * Safe to remove/replace once a real admin-only route exists.
-   */
   @Get('admin-check')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)

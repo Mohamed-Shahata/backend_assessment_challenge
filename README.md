@@ -257,9 +257,3 @@ ALL CONCURRENCY TESTS PASSED
 - **Health check**: `http://localhost:3000/health`
 - **API collection** (REST Client `.http` format, covers auth/wallet/flash-sale
   with ready-made example bodies): [`docs/api-collection/wallet-flash-sale.http`](./docs/api-collection/wallet-flash-sale.http)
-
-## Project Task Log
-
-This project was built incrementally task-by-task; see [`tasks/PROGRESS.md`](./tasks/PROGRESS.md)
-for the full history and per-task implementation notes, and [`tasks/SPEC.md`](./tasks/SPEC.md)
-for the original challenge spec.

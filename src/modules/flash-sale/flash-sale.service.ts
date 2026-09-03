@@ -71,12 +71,6 @@ export class FlashSaleService {
     return event;
   }
 
-  /**
-   * Purchase flow. Two sequential steps (stock reservation, then wallet
-   * deduction) with a compensating action on failure, rather than a single
-   * cross-domain DB transaction — see the task README's "Implementation
-   * Notes" for the reasoning.
-   */
   async purchase(userId: string, dto: PurchaseFlashSaleDto) {
     const existing = await this.findExistingOrder(
       dto.eventId,
@@ -103,6 +97,16 @@ export class FlashSaleService {
     // concurrent requests can never oversell the same unit.
     const reserved = await this.reserveUnit(dto.eventId);
     if (!reserved) {
+      // Lost the reservation race: poll briefly for a concurrent request
+      // with the same idempotencyKey to finish writing its Order, and
+      // replay it instead of reporting a false sold-out.
+      const raced = await this.pollForExistingOrder(
+        dto.eventId,
+        dto.idempotencyKey,
+      );
+      if (raced) {
+        return this.toOrderResult(raced, true);
+      }
       throw new ConflictException(
         'Stock is exhausted for this flash-sale event',
       );
@@ -171,6 +175,29 @@ export class FlashSaleService {
         flashSaleEventId_idempotencyKey: { flashSaleEventId, idempotencyKey },
       },
     });
+  }
+
+  /** Retries findExistingOrder briefly, for when a concurrent winner's
+   * Order write may not have landed yet. */
+  private async pollForExistingOrder(
+    flashSaleEventId: string,
+    idempotencyKey: string,
+    attempts = 5,
+    delayMs = 40,
+  ) {
+    for (let i = 0; i < attempts; i++) {
+      const order = await this.findExistingOrder(
+        flashSaleEventId,
+        idempotencyKey,
+      );
+      if (order) {
+        return order;
+      }
+      if (i < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+    return null;
   }
 
   /** Atomically decrements `remaining` if > 0. Returns true iff a unit was reserved. */

@@ -4,18 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { Params } from 'nestjs-pino';
 import { CORRELATION_ID_HEADER } from '../middleware/correlation-id.middleware';
 
-/**
- * `pino-http`/`nestjs-pino` factory shared by `AppModule`.
- *
- * - Every request/response log line carries `correlationId`, `level`,
- *   `timestamp` (pino's default `time`) and `context` out of the box.
- * - `genReqId` re-uses the `x-correlation-id` header set by
- *   `CorrelationIdMiddleware` (task 01) when it runs first, or generates one
- *   itself (which `CorrelationIdMiddleware` then re-uses) when it runs
- *   first — see the comment in that middleware for why this is safe either
- *   way.
- * - JSON logs in production, pretty-printed logs everywhere else.
- */
 export function createPinoLoggerConfig(config: ConfigService): Params {
   const isProduction = config.get<string>('nodeEnv') === 'production';
 
@@ -47,8 +35,7 @@ export function createPinoLoggerConfig(config: ConfigService): Params {
         req: IncomingMessage,
         res: ServerResponse,
         responseTime: number,
-      ) =>
-        `${req.method} ${req.url} ${res.statusCode} - ${responseTime}ms`,
+      ) => `${req.method} ${req.url} ${res.statusCode} - ${responseTime}ms`,
       customErrorMessage: (
         req: IncomingMessage,
         res: ServerResponse,
