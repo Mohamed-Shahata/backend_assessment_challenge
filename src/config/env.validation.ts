@@ -1,4 +1,4 @@
-import { plainToInstance } from 'class-transformer';
+import { Type, plainToInstance } from 'class-transformer';
 import {
   IsIn,
   IsInt,
@@ -25,6 +25,7 @@ class EnvironmentVariables {
   @IsNotEmpty()
   REDIS_HOST!: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(65535)
@@ -46,19 +47,23 @@ class EnvironmentVariables {
   @IsNotEmpty()
   JWT_REFRESH_TTL!: string;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   THROTTLE_TTL!: number;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   THROTTLE_LIMIT!: number;
 
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(65535)
   PORT!: number;
 
+  @Type(() => Number)
   @IsOptional()
   @IsNumber()
   @Min(0)

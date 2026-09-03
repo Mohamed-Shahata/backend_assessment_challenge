@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import type { Job } from 'bullmq';
@@ -8,19 +8,11 @@ import {
   type OrderConfirmationJobData,
 } from './notifications.constants';
 
-/**
- * Worker for the `order-notifications` queue. Purely a mock/simulation:
- * there is no real email/SMS/push provider here, only a logged
- * "notification sent" (or a thrown error to trigger BullMQ's retry).
- *
- * Fully decoupled from the purchase flow: this processor never touches the
- * Order or Wallet - a failure here only affects the notification job itself.
- */
 @Processor(ORDER_NOTIFICATIONS_QUEUE)
 export class OrderNotificationProcessor extends WorkerHost {
   private readonly logger = new Logger(OrderNotificationProcessor.name);
 
-  constructor(private readonly config: ConfigService) {
+  constructor(@Inject(ConfigService) private readonly config: ConfigService) {
     super();
   }
 

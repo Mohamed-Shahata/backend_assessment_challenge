@@ -4,6 +4,7 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Inject,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { Logger } from 'nestjs-pino';
@@ -19,7 +20,7 @@ interface UnifiedErrorResponse {
 
 @Catch()
 export class HttpExceptionFilter implements ExceptionFilter {
-  constructor(private readonly logger: Logger) {}
+  constructor(@Inject(Logger) private readonly logger: Logger) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();

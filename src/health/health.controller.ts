@@ -11,12 +11,10 @@ import { ORDER_NOTIFICATIONS_QUEUE } from '../modules/notifications/notification
 
 @ApiTags('health')
 @Controller('health')
-// Monitoring/orchestrator health probes (docker-compose, k8s, etc.) poll
-// this frequently and shouldn't be rate-limited like real user traffic.
 @SkipThrottle()
 export class HealthController {
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
     @InjectQueue(ORDER_NOTIFICATIONS_QUEUE)
     private readonly notificationsQueue: Queue,

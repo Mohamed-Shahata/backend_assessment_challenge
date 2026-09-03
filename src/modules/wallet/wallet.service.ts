@@ -29,7 +29,7 @@ export class WalletService {
   private readonly logger = new Logger(WalletService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
