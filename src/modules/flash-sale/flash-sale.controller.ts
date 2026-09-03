@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -45,10 +45,13 @@ export class FlashSaleController {
 
   @Post('purchase')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard, ThrottlerGuard)
+  @UseGuards(JwtAuthGuard)
   // Stricter than the app-wide default (10 req / 60s) - flash-sale purchase
-  // is the hottest, highest-contention route in the system. Task 06 will
-  // tune this further as part of general observability/resilience work.
+  // is the hottest, highest-contention route in the system - but still
+  // generous enough (3 req/s = up to 180/min per user) to not choke a real
+  // user rapid-retrying during a flash sale. `ThrottlerGuard` itself is now
+  // applied globally (`APP_GUARD` in AppModule) with Redis-backed storage,
+  // this decorator only overrides the limit for this route.
   @Throttle({ default: { limit: 3, ttl: 1000 } })
   @ApiOperation({
     summary:
