@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 import Redis from 'ioredis';
@@ -22,6 +22,10 @@ export class HealthController {
 
   @Get()
   @ApiOperation({ summary: 'Check service, database, redis and queue health' })
+  @ApiResponse({
+    status: 200,
+    description: '{ status: "ok" | "degraded", db, redis, queue }',
+  })
   async check() {
     const [db, redis, queue] = await Promise.all([
       this.prisma.isHealthy(),

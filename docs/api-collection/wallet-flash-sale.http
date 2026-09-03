@@ -1,0 +1,160 @@
+### Digital Wallet & Flash-Sale Engine — API Collection (VS Code "REST Client" format)
+### Usage: install the "REST Client" VS Code extension, open this file, click "Send Request"
+### above each block. Variables below are shared across all requests in this file.
+
+@baseUrl = http://localhost:3000
+@customerEmail = customer1@example.com
+@customerPassword = StrongP@ssw0rd
+@adminEmail = admin@example.com
+@adminPassword = StrongP@ssw0rd
+
+### After running "Login (customer)" / "Login (admin)" below, copy the tokens from the
+### response into these two lines (REST Client also lets you chain requests with
+### {{loginCustomer.response.body.$.accessToken}} if you prefer — kept explicit here
+### for portability with Postman/Bruno imports).
+@customerAccessToken = PASTE_CUSTOMER_ACCESS_TOKEN_HERE
+@customerRefreshToken = PASTE_CUSTOMER_REFRESH_TOKEN_HERE
+@adminAccessToken = PASTE_ADMIN_ACCESS_TOKEN_HERE
+
+@productId = PASTE_PRODUCT_ID_HERE
+@flashSaleEventId = PASTE_FLASH_SALE_EVENT_ID_HERE
+@otherUserId = PASTE_RECIPIENT_USER_ID_HERE
+
+
+########################################
+# HEALTH
+########################################
+
+### Health check (db + redis + queue)
+GET {{baseUrl}}/health
+
+
+########################################
+# AUTH
+########################################
+
+### Register a new CUSTOMER account
+# @name registerCustomer
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{customerEmail}}",
+  "password": "{{customerPassword}}"
+}
+
+### Register a second account (to use as a transfer recipient / to promote to ADMIN)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Login (customer)
+# @name loginCustomer
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{customerEmail}}",
+  "password": "{{customerPassword}}"
+}
+
+### Login (admin) — the account must already have role=ADMIN in the DB
+# (see README "Creating the first admin user")
+# @name loginAdmin
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Refresh access/refresh token pair
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{customerRefreshToken}}"
+}
+
+### Logout (revoke a refresh token)
+POST {{baseUrl}}/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "{{customerRefreshToken}}"
+}
+
+### Get current authenticated user
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{customerAccessToken}}
+
+### [RBAC demo] ADMIN-only endpoint — 200 for an admin token, 403 for a customer token
+GET {{baseUrl}}/auth/admin-check
+Authorization: Bearer {{adminAccessToken}}
+
+
+########################################
+# WALLET
+########################################
+
+### Deposit funds into the current user's wallet
+POST {{baseUrl}}/wallets/deposit
+Authorization: Bearer {{customerAccessToken}}
+Content-Type: application/json
+
+{
+  "amount": 100.50
+}
+
+### Get current user's wallet balance + recent ledger entries
+GET {{baseUrl}}/wallets/me?limit=20
+Authorization: Bearer {{customerAccessToken}}
+
+### Transfer funds to another user (idempotent — resending the same idempotencyKey
+### returns the original result instead of transferring again)
+POST {{baseUrl}}/wallets/transfer
+Authorization: Bearer {{customerAccessToken}}
+Content-Type: application/json
+
+{
+  "toUserId": "{{otherUserId}}",
+  "amount": 25.00,
+  "idempotencyKey": "transfer-demo-0001"
+}
+
+
+########################################
+# FLASH SALE
+########################################
+
+### [ADMIN] Create a flash-sale event for a seeded product
+### (run `npm run seed` first to get a productId — see README)
+POST {{baseUrl}}/flash-sale/events
+Authorization: Bearer {{adminAccessToken}}
+Content-Type: application/json
+
+{
+  "productId": "{{productId}}",
+  "totalStock": 10,
+  "startsAt": "2026-09-03T00:00:00.000Z",
+  "endsAt": "2026-12-31T23:59:59.000Z"
+}
+
+### [ADMIN] Get a flash-sale event's status and remaining stock
+GET {{baseUrl}}/flash-sale/events/{{flashSaleEventId}}
+Authorization: Bearer {{adminAccessToken}}
+
+### Purchase one unit from a flash-sale event (idempotent via idempotencyKey)
+POST {{baseUrl}}/flash-sale/purchase
+Authorization: Bearer {{customerAccessToken}}
+Content-Type: application/json
+
+{
+  "eventId": "{{flashSaleEventId}}",
+  "idempotencyKey": "purchase-demo-0001"
+}

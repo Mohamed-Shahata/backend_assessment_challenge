@@ -9,7 +9,12 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Roles } from '../../auth/decorators/roles.decorator';
@@ -31,6 +36,18 @@ export class FlashSaleController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: '[ADMIN] Create a flash-sale event' })
+  @ApiResponse({ status: 201, description: 'Flash-sale event created' })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Validation error (bad dates, non-positive stock, endsAt before startsAt)',
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token' })
+  @ApiResponse({ status: 403, description: 'Authenticated but not an ADMIN' })
+  @ApiResponse({
+    status: 404,
+    description: 'productId does not match an existing product',
+  })
   createEvent(@Body() dto: CreateFlashSaleEventDto) {
     return this.flashSaleService.createEvent(dto);
   }
@@ -39,6 +56,13 @@ export class FlashSaleController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: "[ADMIN] Get an event's status and current stock" })
+  @ApiResponse({
+    status: 200,
+    description: 'Event details including remaining stock',
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token' })
+  @ApiResponse({ status: 403, description: 'Authenticated but not an ADMIN' })
+  @ApiResponse({ status: 404, description: 'Flash-sale event not found' })
   getEvent(@Param('id', ParseUUIDPipe) id: string) {
     return this.flashSaleService.getEvent(id);
   }
@@ -56,6 +80,26 @@ export class FlashSaleController {
   @ApiOperation({
     summary:
       'Purchase one unit from a flash-sale event (idempotent via idempotencyKey)',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Order confirmed (or replayed from a matching idempotencyKey)',
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Validation error, event not currently active, or insufficient wallet balance',
+  })
+  @ApiResponse({ status: 401, description: 'Missing or invalid access token' })
+  @ApiResponse({ status: 404, description: 'Flash-sale event not found' })
+  @ApiResponse({
+    status: 409,
+    description:
+      'Sold out (no remaining stock) or a concurrent duplicate request already won',
+  })
+  @ApiResponse({
+    status: 429,
+    description: 'Too many purchase attempts (rate limited)',
   })
   purchase(
     @CurrentUser() user: CurrentUserPayload,

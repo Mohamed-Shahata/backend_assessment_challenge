@@ -1,0 +1,5 @@
+# Shell scripts MUST use LF line endings, even when checked out on Windows.
+# A CRLF shebang line (`#!/bin/sh\r`) is not recognized by Alpine/Linux and
+# causes `exec ./docker-entrypoint.sh: no such file or directory` at
+# container startup, even though the file exists and is executable.
+*.sh text eol=lf
