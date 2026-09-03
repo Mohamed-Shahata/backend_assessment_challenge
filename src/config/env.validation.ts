@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -11,6 +12,11 @@ import {
 } from 'class-validator';
 
 class EnvironmentVariables {
+  @IsOptional()
+  @IsString()
+  @IsIn(['development', 'production', 'test'])
+  NODE_ENV?: string;
+
   @IsString()
   @IsNotEmpty()
   DATABASE_URL!: string;

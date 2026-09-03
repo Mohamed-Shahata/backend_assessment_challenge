@@ -13,6 +13,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { Role } from '../generated/prisma/enums';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
@@ -31,6 +32,9 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  // Not as strict as login (it's not a brute-force target the same way),
+  // but still capped to stop scripted mass-account creation.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Create a new CUSTOMER account' })
   @ApiResponse({ status: 201, type: AuthTokensDto })
   register(@Body() dto: RegisterDto): Promise<AuthTokensDto> {
@@ -39,6 +43,9 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  // Brute-force prevention: 5 attempts / minute per IP (the throttler's
+  // default tracker), well below the app-wide default limit.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @ApiOperation({ summary: 'Log in with email + password' })
   @ApiResponse({ status: 200, type: AuthTokensDto })
   login(@Body() dto: LoginDto): Promise<AuthTokensDto> {
@@ -47,6 +54,7 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Rotate a refresh token for a new access/refresh pair',
   })

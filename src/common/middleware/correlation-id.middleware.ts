@@ -11,11 +11,15 @@ export interface RequestWithCorrelationId extends Request {
 @Injectable()
 export class CorrelationIdMiddleware implements NestMiddleware {
   use(req: RequestWithCorrelationId, res: Response, next: NextFunction) {
+    const pinoReqId = (req as unknown as { id?: string }).id;
     const incoming = req.headers[CORRELATION_ID_HEADER];
     const correlationId =
-      (Array.isArray(incoming) ? incoming[0] : incoming) || uuidv4();
+      pinoReqId ||
+      (Array.isArray(incoming) ? incoming[0] : incoming) ||
+      uuidv4();
 
     req.correlationId = correlationId;
+    req.headers[CORRELATION_ID_HEADER] = correlationId;
     res.setHeader(CORRELATION_ID_HEADER, correlationId);
     next();
   }

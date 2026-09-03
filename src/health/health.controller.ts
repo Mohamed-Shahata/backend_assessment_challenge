@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 import Redis from 'ioredis';
 import { Inject } from '@nestjs/common';
@@ -10,6 +11,9 @@ import { ORDER_NOTIFICATIONS_QUEUE } from '../modules/notifications/notification
 
 @ApiTags('health')
 @Controller('health')
+// Monitoring/orchestrator health probes (docker-compose, k8s, etc.) poll
+// this frequently and shouldn't be rate-limited like real user traffic.
+@SkipThrottle()
 export class HealthController {
   constructor(
     private readonly prisma: PrismaService,
