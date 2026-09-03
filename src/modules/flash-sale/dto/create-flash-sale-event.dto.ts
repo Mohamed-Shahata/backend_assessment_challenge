@@ -1,5 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsDateString, IsInt, IsUUID, Min } from 'class-validator';
+import { IsAfterDate } from '../../../common/validators/is-after-date.validator';
+import { IsNotPastDate } from '../../../common/validators/is-not-past-date.validator';
 
 export class CreateFlashSaleEventDto {
   @ApiProperty({ description: 'Id of the product being sold' })
@@ -13,9 +15,12 @@ export class CreateFlashSaleEventDto {
 
   @ApiProperty({ example: '2026-09-02T12:00:00.000Z' })
   @IsDateString()
+  @IsNotPastDate({ message: 'startsAt cannot be in the past' })
   startsAt!: string;
 
   @ApiProperty({ example: '2026-09-02T13:00:00.000Z' })
   @IsDateString()
+  @IsNotPastDate({ message: 'endsAt cannot be in the past' })
+  @IsAfterDate('startsAt', { message: 'endsAt must be after startsAt' })
   endsAt!: string;
 }
