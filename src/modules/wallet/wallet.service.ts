@@ -83,6 +83,64 @@ export class WalletService {
     });
   }
 
+  /**
+   * Deducts `amount` from the user's wallet for a purchase (flash-sale, etc.)
+   * and records a PURCHASE ledger entry. Idempotent on `referenceId`
+   * (typically the Order id) via the `@@unique([walletId, referenceId, type])`
+   * constraint on LedgerEntry — a retry with the same referenceId returns the
+   * original ledger entry instead of deducting twice.
+   * Throws BadRequestException if the balance is insufficient.
+   */
+  async purchaseDeduct(
+    userId: string,
+    amount: Prisma.Decimal,
+    referenceId: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      const wallet = await this.lockWalletByUserId(tx, userId);
+
+      const existing = await tx.ledgerEntry.findUnique({
+        where: {
+          walletId_referenceId_type: {
+            walletId: wallet.id,
+            referenceId,
+            type: LedgerType.PURCHASE,
+          },
+        },
+      });
+      if (existing) {
+        return {
+          walletId: wallet.id,
+          balance: existing.balanceAfter,
+          entry: existing,
+        };
+      }
+
+      if (wallet.balance.lt(amount)) {
+        throw new BadRequestException('Insufficient balance');
+      }
+
+      const newBalance = wallet.balance.minus(amount);
+
+      const updated = await tx.wallet.update({
+        where: { id: wallet.id },
+        data: { balance: newBalance, version: { increment: 1 } },
+      });
+
+      const entry = await tx.ledgerEntry.create({
+        data: {
+          walletId: wallet.id,
+          type: LedgerType.PURCHASE,
+          amount: amount.negated(),
+          balanceAfter: newBalance,
+          referenceId,
+        },
+      });
+
+      return { walletId: wallet.id, balance: updated.balance, entry };
+    });
+  }
+
   async transfer(userId: string, dto: TransferDto) {
     if (dto.toUserId === userId) {
       throw new BadRequestException('Cannot transfer to yourself');

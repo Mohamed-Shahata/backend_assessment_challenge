@@ -11,6 +11,7 @@ import { HealthModule } from './health/health.module';
 import { CorrelationIdMiddleware } from './common/middleware/correlation-id.middleware';
 import { AuthModule } from './auth/auth.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { FlashSaleModule } from './modules/flash-sale/flash-sale.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     HealthModule,
     AuthModule,
     WalletModule,
+    FlashSaleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
