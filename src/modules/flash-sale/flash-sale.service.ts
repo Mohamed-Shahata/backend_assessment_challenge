@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
@@ -20,7 +21,6 @@ import {
   type OrderConfirmationJobData,
 } from '../notifications/notifications.constants';
 
-/** Row shape returned by the atomic `UPDATE ... RETURNING remaining` reservation query. */
 interface ReservationRow {
   remaining: number;
 }
@@ -35,8 +35,8 @@ export class FlashSaleService {
   private readonly logger = new Logger(FlashSaleService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly walletService: WalletService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(WalletService) private readonly walletService: WalletService,
     @InjectQueue(ORDER_NOTIFICATIONS_QUEUE)
     private readonly notificationsQueue: Queue<OrderConfirmationJobData>,
   ) {}
@@ -109,9 +109,7 @@ export class FlashSaleService {
     }
 
     const orderId = randomUUID();
-    // Deterministic (not random) so that two concurrent requests carrying the
-    // *same* idempotencyKey deduct the wallet at most once, even if both slip
-    // past the findExistingOrder check above before either has written an Order row.
+
     const walletReferenceId = `flash-sale:${dto.eventId}:${dto.idempotencyKey}`;
 
     try {
@@ -151,8 +149,6 @@ export class FlashSaleService {
     });
 
     if (!order.raced && order.order.status === OrderStatus.CONFIRMED) {
-      // Fire-and-forget: a queueing failure must not affect the Order/Wallet
-      // that were already committed above.
       await this.notificationsQueue
         .add(
           ORDER_CONFIRMATION_JOB,

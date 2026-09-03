@@ -1,4 +1,4 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
+import { Inject, Injectable, NestMiddleware } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import type { NextFunction, Request, Response } from 'express';
@@ -14,8 +14,8 @@ import { Role } from '../../generated/prisma/enums';
 @Injectable()
 export class BullBoardAdminMiddleware implements NestMiddleware {
   constructor(
-    private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
+    @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(ConfigService) private readonly config: ConfigService,
   ) {}
 
   use(req: Request, res: Response, next: NextFunction): void {

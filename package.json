@@ -8,6 +8,7 @@
   "scripts": {
     "build": "nest build",
     "seed": "tsx prisma/seed.ts",
+    "test:concurrency": "tsx test/concurrency/index.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

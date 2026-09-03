@@ -30,10 +30,10 @@ export class AuthService {
   private readonly logger = new Logger(AuthService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
-    private readonly walletService: WalletService,
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(JwtService) private readonly jwtService: JwtService,
+    @Inject(ConfigService) private readonly config: ConfigService,
+    @Inject(WalletService) private readonly walletService: WalletService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
@@ -47,8 +47,6 @@ export class AuthService {
 
     const hashed = await bcrypt.hash(dto.password, BCRYPT_SALT_ROUNDS);
 
-    // User + wallet are created atomically: a registered user must never
-    // end up without a wallet (see task 03 README, "Wallet auto-provisioning").
     const user = await this.prisma.$transaction(async (tx) => {
       const created = await tx.user.create({
         data: { email: dto.email, password: hashed },
